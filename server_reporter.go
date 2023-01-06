@@ -15,17 +15,24 @@ type serverReporter struct {
 	serviceName string
 	methodName  string
 	startTime   time.Time
+
+	options *Options
 }
 
-func newServerReporter(m *ServerMetrics, rpcType grpcType, fullMethod string) *serverReporter {
+func newServerReporter(m *ServerMetrics, rpcType grpcType, fullMethod string, options *Options) *serverReporter {
 	r := &serverReporter{
 		metrics: m,
 		rpcType: rpcType,
+		options: options,
 	}
+
 	if r.metrics.serverHandledHistogramEnabled {
 		r.startTime = time.Now()
 	}
 	r.serviceName, r.methodName = splitMethodName(fullMethod)
+	if r.options.GetServiceName() != "" {
+		r.serviceName = r.options.GetServiceName()
+	}
 	r.metrics.serverStartedCounter.WithLabelValues(string(r.rpcType), r.serviceName, r.methodName).Inc()
 	return r
 }

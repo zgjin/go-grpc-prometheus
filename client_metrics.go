@@ -29,6 +29,8 @@ type ClientMetrics struct {
 	clientStreamSendHistogramEnabled bool
 	clientStreamSendHistogramOpts    prom.HistogramOpts
 	clientStreamSendHistogram        *prom.HistogramVec
+
+	options *Options
 }
 
 // NewClientMetrics returns a ClientMetrics object. Use a new instance of
@@ -83,7 +85,12 @@ func NewClientMetrics(counterOpts ...CounterOption) *ClientMetrics {
 			Buckets: prom.DefBuckets,
 		},
 		clientStreamSendHistogram: nil,
+		options:                   &Options{},
 	}
+}
+
+func (m *ClientMetrics) WithOptions(opts ...Option) {
+	m.options.apply(opts...)
 }
 
 // Describe sends the super-set of all possible descriptors of metrics
@@ -176,7 +183,7 @@ func (m *ClientMetrics) EnableClientStreamSendTimeHistogram(opts ...HistogramOpt
 // UnaryClientInterceptor is a gRPC client-side interceptor that provides Prometheus monitoring for Unary RPCs.
 func (m *ClientMetrics) UnaryClientInterceptor() func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		monitor := newClientReporter(m, Unary, method)
+		monitor := newClientReporter(m, Unary, method, m.options)
 		monitor.SentMessage()
 		err := invoker(ctx, method, req, reply, cc, opts...)
 		if err == nil {
@@ -191,7 +198,7 @@ func (m *ClientMetrics) UnaryClientInterceptor() func(ctx context.Context, metho
 // StreamClientInterceptor is a gRPC client-side interceptor that provides Prometheus monitoring for Streaming RPCs.
 func (m *ClientMetrics) StreamClientInterceptor() func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-		monitor := newClientReporter(m, clientStreamType(desc), method)
+		monitor := newClientReporter(m, clientStreamType(desc), method, m.options)
 		clientStream, err := streamer(ctx, desc, cc, method, opts...)
 		if err != nil {
 			st, _ := status.FromError(err)

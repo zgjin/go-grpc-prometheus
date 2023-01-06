@@ -34,7 +34,7 @@ func init() {
 // allows for easier monitoring in Prometheus (no missing metrics), and should
 // be called *after* all services have been registered with the server. This
 // function acts on the DefaultServerMetrics variable.
-func Register(server *grpc.Server) {
+func Register(server *grpc.Server, opts ...Option) {
 	DefaultServerMetrics.InitializeMetrics(server)
 }
 

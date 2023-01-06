@@ -39,3 +39,29 @@ func WithHistogramConstLabels(labels prom.Labels) HistogramOption {
 		o.ConstLabels = labels
 	}
 }
+
+type Options struct {
+	serviceName string
+}
+
+func (opt *Options) GetServiceName() string {
+	if opt == nil {
+		return ""
+	}
+
+	return opt.serviceName
+}
+
+func (opt *Options) apply(optFns ...Option) {
+	for _, fn := range optFns {
+		fn(opt)
+	}
+}
+
+type Option func(*Options)
+
+func WithServiceName(serviceName string) Option {
+	return func(o *Options) {
+		o.serviceName = serviceName
+	}
+}

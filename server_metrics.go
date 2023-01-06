@@ -2,6 +2,7 @@ package grpc_prometheus
 
 import (
 	"context"
+
 	"github.com/grpc-ecosystem/go-grpc-prometheus/packages/grpcstatus"
 	prom "github.com/prometheus/client_golang/prometheus"
 
@@ -18,6 +19,8 @@ type ServerMetrics struct {
 	serverHandledHistogramEnabled bool
 	serverHandledHistogramOpts    prom.HistogramOpts
 	serverHandledHistogram        *prom.HistogramVec
+
+	options *Options
 }
 
 // NewServerMetrics returns a ServerMetrics object. Use a new instance of
@@ -54,6 +57,7 @@ func NewServerMetrics(counterOpts ...CounterOption) *ServerMetrics {
 			Buckets: prom.DefBuckets,
 		},
 		serverHandledHistogram: nil,
+		options:                &Options{},
 	}
 }
 
@@ -103,7 +107,7 @@ func (m *ServerMetrics) Collect(ch chan<- prom.Metric) {
 // UnaryServerInterceptor is a gRPC server-side interceptor that provides Prometheus monitoring for Unary RPCs.
 func (m *ServerMetrics) UnaryServerInterceptor() func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		monitor := newServerReporter(m, Unary, info.FullMethod)
+		monitor := newServerReporter(m, Unary, info.FullMethod, m.options)
 		monitor.ReceivedMessage()
 		resp, err := handler(ctx, req)
 		st, _ := grpcstatus.FromError(err)
@@ -118,7 +122,7 @@ func (m *ServerMetrics) UnaryServerInterceptor() func(ctx context.Context, req i
 // StreamServerInterceptor is a gRPC server-side interceptor that provides Prometheus monitoring for Streaming RPCs.
 func (m *ServerMetrics) StreamServerInterceptor() func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		monitor := newServerReporter(m, streamRPCType(info), info.FullMethod)
+		monitor := newServerReporter(m, streamRPCType(info), info.FullMethod, m.options)
 		err := handler(srv, &monitoredServerStream{ss, monitor})
 		st, _ := grpcstatus.FromError(err)
 		monitor.Handled(st.Code())
@@ -129,11 +133,18 @@ func (m *ServerMetrics) StreamServerInterceptor() func(srv interface{}, ss grpc.
 // InitializeMetrics initializes all metrics, with their appropriate null
 // value, for all gRPC methods registered on a gRPC server. This is useful, to
 // ensure that all metrics exist when collecting and querying.
-func (m *ServerMetrics) InitializeMetrics(server *grpc.Server) {
+func (m *ServerMetrics) InitializeMetrics(server *grpc.Server, opts ...Option) {
+	m.options.apply(opts...)
+
 	serviceInfo := server.GetServiceInfo()
 	for serviceName, info := range serviceInfo {
 		for _, mInfo := range info.Methods {
-			preRegisterMethod(m, serviceName, &mInfo)
+			sn := serviceName
+			if m.options.serviceName != "" {
+				sn = m.options.serviceName
+			}
+
+			preRegisterMethod(m, sn, &mInfo)
 		}
 	}
 }

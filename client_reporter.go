@@ -18,7 +18,7 @@ type clientReporter struct {
 	startTime   time.Time
 }
 
-func newClientReporter(m *ClientMetrics, rpcType grpcType, fullMethod string) *clientReporter {
+func newClientReporter(m *ClientMetrics, rpcType grpcType, fullMethod string, options *Options) *clientReporter {
 	r := &clientReporter{
 		metrics: m,
 		rpcType: rpcType,
@@ -27,6 +27,9 @@ func newClientReporter(m *ClientMetrics, rpcType grpcType, fullMethod string) *c
 		r.startTime = time.Now()
 	}
 	r.serviceName, r.methodName = splitMethodName(fullMethod)
+	if options.GetServiceName() != "" {
+		r.serviceName = options.GetServiceName()
+	}
 	r.metrics.clientStartedCounter.WithLabelValues(string(r.rpcType), r.serviceName, r.methodName).Inc()
 	return r
 }
