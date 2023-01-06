@@ -29,7 +29,7 @@ func init() {
 	prom.MustRegister(DefaultClientMetrics.clientStreamMsgSent)
 }
 
-func WithOptions(opts ...Option) {
+func WithClientOptions(opts ...Option) {
 	DefaultClientMetrics.WithOptions(opts...)
 }
 
