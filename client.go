@@ -29,6 +29,10 @@ func init() {
 	prom.MustRegister(DefaultClientMetrics.clientStreamMsgSent)
 }
 
+func WithOptions(opts ...Option) {
+	DefaultClientMetrics.WithOptions(opts...)
+}
+
 // EnableClientHandlingTimeHistogram turns on recording of handling time of
 // RPCs. Histogram metrics can be very expensive for Prometheus to retain and
 // query. This function acts on the DefaultClientMetrics variable and the
