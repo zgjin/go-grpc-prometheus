@@ -35,7 +35,7 @@ func init() {
 // be called *after* all services have been registered with the server. This
 // function acts on the DefaultServerMetrics variable.
 func Register(server *grpc.Server, opts ...Option) {
-	DefaultServerMetrics.InitializeMetrics(server)
+	DefaultServerMetrics.InitializeMetrics(server, opts...)
 }
 
 // EnableHandlingTimeHistogram turns on recording of handling time
